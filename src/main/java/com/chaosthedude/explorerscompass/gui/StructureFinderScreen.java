@@ -201,8 +201,24 @@ public class StructureFinderScreen extends Screen {
     }
 
     public void addSearchResult(ResourceLocation key, int x, int z) {
+        ExplorersCompass.LOGGER.info("Adding search result to UI for " + key + " at X: " + x + ", Z: " + z);
         searchResults.put(key, new SearchResult(x, z));
-        selectionList.refreshList();
+
+        // Force a refresh of the selection list to update the UI
+        if (selectionList != null) {
+            ExplorersCompass.LOGGER.info("Refreshing selection list to show new result");
+            selectionList.refreshList();
+
+            // If the currently selected structure is the one we found, update teleport button
+            if (selectionList.hasSelection() && selectionList.getSelected().getStructureKey().equals(key)) {
+                teleportButton.active = true;
+            }
+        } else {
+            ExplorersCompass.LOGGER.warn("Selection list is null, cannot refresh UI");
+        }
+
+        // Remove from active searches
+        finishSearch(key);
     }
 
     private void setupWidgets() {

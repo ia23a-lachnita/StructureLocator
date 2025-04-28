@@ -2,6 +2,7 @@ package com.chaosthedude.explorerscompass.gui;
 
 import java.util.Objects;
 
+import com.chaosthedude.explorerscompass.ExplorersCompass;
 import com.chaosthedude.explorerscompass.util.RenderUtils;
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -79,12 +80,39 @@ public class StructureSearchList extends ObjectSelectionList<StructureSearchEntr
 	}
 
 	public void refreshList() {
+		ExplorersCompass.LOGGER.info("Refreshing structure list - current entries: " + children().size());
+
+		// Get previously selected entry if any
+		StructureSearchEntry selectedEntry = getSelected();
+		ResourceLocation selectedKey = selectedEntry != null ? selectedEntry.getStructureKey() : null;
+
 		clearEntries();
 		for (ResourceLocation key : parentScreen.sortStructures()) {
 			addEntry(new StructureSearchEntry(this, key));
+
+			// Log if this structure has a search result
+			if (parentScreen.getSearchResult(key) != null) {
+				ExplorersCompass.LOGGER.info("  - Added entry for " + key + " with found coordinates");
+			} else {
+				ExplorersCompass.LOGGER.info("  - Added entry for " + key + " (no coordinates yet)");
+			}
 		}
-		selectStructure(null);
-		setScrollAmount(0);
+
+		// Restore selection if possible
+		if (selectedKey != null) {
+			for (StructureSearchEntry entry : children()) {
+				if (entry.getStructureKey().equals(selectedKey)) {
+					setSelected(entry);
+					parentScreen.selectStructure(entry);
+					break;
+				}
+			}
+		} else {
+			setSelected(null);
+			parentScreen.selectStructure(null);
+		}
+
+		ExplorersCompass.LOGGER.info("Refreshed structure list - new entries: " + children().size());
 	}
 
 	public void selectStructure(StructureSearchEntry entry) {

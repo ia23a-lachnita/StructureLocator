@@ -25,8 +25,6 @@ public class CompassSearchPacket {
 	private int y;
 	private int z;
 
-	// Remove the workerManager field - create it in the handle method instead
-
 	public CompassSearchPacket() {
 		// Empty constructor - initialize fields in handle method
 	}
@@ -71,9 +69,17 @@ public class CompassSearchPacket {
 			ServerLevel level = ctx.get().getSender().getLevel();
 			BlockPos pos = new BlockPos(x, y, z);
 
+			ExplorersCompass.LOGGER.info("Processing search request for group: " + groupKey + " with " + structureKeys.size() + " structures");
+
 			List<Structure> structures = new ArrayList<Structure>();
 			for (ResourceLocation key : structureKeys) {
-				structures.add(StructureUtils.getStructureForKey(level, key));
+				Structure structure = StructureUtils.getStructureForKey(level, key);
+				if (structure != null) {
+					structures.add(structure);
+					ExplorersCompass.LOGGER.info("Added structure to search list: " + key);
+				} else {
+					ExplorersCompass.LOGGER.warn("Could not find structure for key: " + key);
+				}
 			}
 
 			// Create the worker manager here with the context
@@ -84,6 +90,7 @@ public class CompassSearchPacket {
 					(resourceLocation, coordinates) -> {
 						int foundX = coordinates.getFirst();
 						int foundZ = coordinates.getSecond();
+						ExplorersCompass.LOGGER.info("Search worker found structure: " + resourceLocation + " at X: " + foundX + ", Z: " + foundZ);
 						ExplorersCompass.network.sendTo(
 								new StructureFoundPacket(resourceLocation, foundX, foundZ),
 								ctx.get().getSender().connection.getConnection(),
@@ -91,6 +98,7 @@ public class CompassSearchPacket {
 						);
 					},
 					(resourceLocation) -> {
+						ExplorersCompass.LOGGER.info("Search worker could not find structure: " + resourceLocation);
 						ExplorersCompass.network.sendTo(
 								new StructureNotFoundPacket(resourceLocation),
 								ctx.get().getSender().connection.getConnection(),
@@ -99,6 +107,7 @@ public class CompassSearchPacket {
 					}
 			);
 
+			ExplorersCompass.LOGGER.info("Starting search worker for " + structures.size() + " structures");
 			workerManager.start();
 		});
 		ctx.get().setPacketHandled(true);

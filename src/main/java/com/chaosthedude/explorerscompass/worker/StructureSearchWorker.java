@@ -98,8 +98,11 @@ public abstract class StructureSearchWorker<T extends StructurePlacement> implem
 	}
 
 	protected void succeed(BlockPos pos, Structure structure) {
-		ExplorersCompass.LOGGER.info("SearchWorkerManager " + managerId + ": " + getName() + " succeeded with " + (shouldLogRadius() ? getRadius() + " radius, " : "") + samples + " samples");
-		onSuccess.accept(StructureUtils.getKeyForStructure(level, structure), Pair.of(pos.getX(), pos.getZ()));
+		ResourceLocation structureKey = StructureUtils.getKeyForStructure(level, structure);
+		ExplorersCompass.LOGGER.info("SearchWorkerManager " + managerId + ": " + getName() + " succeeded with " +
+				(shouldLogRadius() ? getRadius() + " radius, " : "") + samples + " samples - Structure: " +
+				structureKey + " at X: " + pos.getX() + ", Z: " + pos.getZ());
+		onSuccess.accept(structureKey, Pair.of(pos.getX(), pos.getZ()));
 		finished = true;
 	}
 

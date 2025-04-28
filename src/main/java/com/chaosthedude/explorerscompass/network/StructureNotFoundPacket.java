@@ -32,22 +32,16 @@ public class StructureNotFoundPacket {
 
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
+            ExplorersCompass.LOGGER.info("Received StructureNotFoundPacket for " + structureKey);
+
             if (Minecraft.getInstance().screen instanceof StructureFinderScreen) {
                 StructureFinderScreen screen = (StructureFinderScreen) Minecraft.getInstance().screen;
+                ExplorersCompass.LOGGER.info("Updating UI to mark structure as not found: " + structureKey);
                 screen.finishSearch(structureKey); // Mark search as complete
-
-                // Add a log message
-                ExplorersCompass.LOGGER.info("Could not find structure: " + structureKey);
+            } else {
+                ExplorersCompass.LOGGER.warn("Structure not found packet received but StructureFinderScreen is not open");
             }
         });
         ctx.get().setPacketHandled(true);
-    }
-
-    private void handleOnClient() {
-        if (Minecraft.getInstance().screen instanceof StructureFinderScreen) {
-            // Update the UI to show this structure as not found
-            // We don't need to add it to search results as null; the UI already handles displaying
-            // structures with no search results as "Not found"
-        }
     }
 }

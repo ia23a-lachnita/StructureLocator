@@ -35,10 +35,22 @@ public class StructureSearchEntry extends ObjectSelectionList.Entry<StructureSea
 	@Override
 	public void render(PoseStack poseStack, int par1, int par2, int par3, int par4, int par5, int par6, int par7, boolean par8, float par9) {
 		SearchResult result = parentScreen.getSearchResult(structureKey);
-		String coordinateText = result != null ? "X: " + result.getX() + ", Z: " + result.getZ() : "Not found";
+		String coordinateText;
+		int textColor;
+
+		if (result != null) {
+			coordinateText = "X: " + result.getX() + ", Z: " + result.getZ();
+			textColor = 0x00FF00; // Green for found
+		} else {
+			coordinateText = "Not found";
+			textColor = 0x808080; // Gray for not found
+		}
+
+		// For debugging - log what we're showing
+		// ExplorersCompass.LOGGER.info("Rendering structure entry: " + structureKey + ", coords: " + coordinateText);
 
 		mc.font.draw(poseStack, Component.literal(StructureUtils.getPrettyStructureName(structureKey)), par3 + 1, par2 + 1, 0xffffff);
-		mc.font.draw(poseStack, Component.literal(coordinateText), par3 + 1, par2 + mc.font.lineHeight + 3, result != null ? 0x00FF00 : 0x808080);
+		mc.font.draw(poseStack, Component.literal(coordinateText), par3 + 1, par2 + mc.font.lineHeight + 3, textColor);
 		mc.font.draw(poseStack, Component.translatable(("string.explorerscompass.group")).append(Component.literal(": ")).append(Component.translatable(StructureUtils.getPrettyStructureName(ExplorersCompass.structureKeysToTypeKeys.get(structureKey)))), par3 + 1, par2 + mc.font.lineHeight + 14, 0x808080);
 		mc.font.draw(poseStack, Component.translatable(("string.explorerscompass.dimension")).append(Component.literal(": " + StructureUtils.dimensionKeysToString(ExplorersCompass.dimensionKeysForAllowedStructureKeys.get(structureKey)))), par3 + 1, par2 + mc.font.lineHeight + 25, 0x808080);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);

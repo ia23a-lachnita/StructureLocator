@@ -41,22 +41,17 @@ public class StructureFoundPacket {
     public void handle(Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
             // This will be executed on the client
+            ExplorersCompass.LOGGER.info("Received StructureFoundPacket for " + structureKey + " at X: " + x + ", Z: " + z);
+
             if (Minecraft.getInstance().screen instanceof StructureFinderScreen) {
                 StructureFinderScreen screen = (StructureFinderScreen) Minecraft.getInstance().screen;
+                ExplorersCompass.LOGGER.info("Updating UI with found structure: " + structureKey);
                 screen.addSearchResult(structureKey, x, z);
                 screen.finishSearch(structureKey); // Mark search as complete
-
-                // Add a log message to confirm it's working
-                ExplorersCompass.LOGGER.info("Found structure: " + structureKey + " at X: " + x + ", Z: " + z);
+            } else {
+                ExplorersCompass.LOGGER.warn("Structure found but StructureFinderScreen is not open");
             }
         });
         ctx.get().setPacketHandled(true);
-    }
-
-    private void handleOnClient() {
-        if (Minecraft.getInstance().screen instanceof StructureFinderScreen) {
-            StructureFinderScreen screen = (StructureFinderScreen) Minecraft.getInstance().screen;
-            screen.addSearchResult(structureKey, x, z);
-        }
     }
 }
