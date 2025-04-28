@@ -1,6 +1,7 @@
 package com.chaosthedude.explorerscompass.gui;
 
 import com.chaosthedude.explorerscompass.ExplorersCompass;
+import com.chaosthedude.explorerscompass.gui.StructureFinderScreen.SearchResult;
 import com.chaosthedude.explorerscompass.util.StructureUtils;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -19,7 +20,7 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 public class StructureSearchEntry extends ObjectSelectionList.Entry<StructureSearchEntry> {
 
 	private final Minecraft mc;
-	private final ExplorersCompassScreen parentScreen;
+	private final StructureFinderScreen parentScreen;
 	private final ResourceLocation structureKey;
 	private final StructureSearchList structuresList;
 	private long lastClickTime;
@@ -33,8 +34,11 @@ public class StructureSearchEntry extends ObjectSelectionList.Entry<StructureSea
 
 	@Override
 	public void render(PoseStack poseStack, int par1, int par2, int par3, int par4, int par5, int par6, int par7, boolean par8, float par9) {
+		SearchResult result = parentScreen.getSearchResult(structureKey);
+		String coordinateText = result != null ? "X: " + result.getX() + ", Z: " + result.getZ() : "Not found";
+
 		mc.font.draw(poseStack, Component.literal(StructureUtils.getPrettyStructureName(structureKey)), par3 + 1, par2 + 1, 0xffffff);
-		mc.font.draw(poseStack, Component.translatable(("string.explorerscompass.source")).append(Component.literal(": " + StructureUtils.getPrettyStructureSource(structureKey))), par3 + 1, par2 + mc.font.lineHeight + 3, 0x808080);
+		mc.font.draw(poseStack, Component.literal(coordinateText), par3 + 1, par2 + mc.font.lineHeight + 3, result != null ? 0x00FF00 : 0x808080);
 		mc.font.draw(poseStack, Component.translatable(("string.explorerscompass.group")).append(Component.literal(": ")).append(Component.translatable(StructureUtils.getPrettyStructureName(ExplorersCompass.structureKeysToTypeKeys.get(structureKey)))), par3 + 1, par2 + mc.font.lineHeight + 14, 0x808080);
 		mc.font.draw(poseStack, Component.translatable(("string.explorerscompass.dimension")).append(Component.literal(": " + StructureUtils.dimensionKeysToString(ExplorersCompass.dimensionKeysForAllowedStructureKeys.get(structureKey)))), par3 + 1, par2 + mc.font.lineHeight + 25, 0x808080);
 		RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -54,7 +58,7 @@ public class StructureSearchEntry extends ObjectSelectionList.Entry<StructureSea
 		}
 		return false;
 	}
-	
+
 	@Override
 	public Component getNarration() {
 		return Component.literal(StructureUtils.getPrettyStructureName(structureKey));
@@ -64,10 +68,13 @@ public class StructureSearchEntry extends ObjectSelectionList.Entry<StructureSea
 		mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
 		parentScreen.searchForStructure(structureKey);
 	}
-	
+
 	public void searchForGroup() {
 		mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
 		parentScreen.searchForGroup(ExplorersCompass.structureKeysToTypeKeys.get(structureKey));
 	}
 
+	public ResourceLocation getStructureKey() {
+		return structureKey;
+	}
 }

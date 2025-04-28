@@ -15,9 +15,9 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 @OnlyIn(Dist.CLIENT)
 public class StructureSearchList extends ObjectSelectionList<StructureSearchEntry> {
 
-	private final ExplorersCompassScreen parentScreen;
+	private final StructureFinderScreen parentScreen;
 
-	public StructureSearchList(ExplorersCompassScreen parentScreen, Minecraft mc, int width, int height, int top, int bottom, int slotHeight) {
+	public StructureSearchList(StructureFinderScreen parentScreen, Minecraft mc, int width, int height, int top, int bottom, int slotHeight) {
 		super(mc, width, height, top, bottom, slotHeight);
 		this.parentScreen = parentScreen;
 		refreshList();
@@ -68,7 +68,7 @@ public class StructureSearchList extends ObjectSelectionList<StructureSearchEntr
 			if (top < y0) {
 				top = y0;
 			}
-			
+
 			RenderUtils.drawRect(left, y0, right, y1, (int) (2.35F * 255.0F) / 2 << 24);
 			RenderUtils.drawRect(left, top, right, top + height, (int) (1.9F * 255.0F) / 2 << 24);
 		}
@@ -96,8 +96,7 @@ public class StructureSearchList extends ObjectSelectionList<StructureSearchEntr
 		return getSelected() != null;
 	}
 
-	public ExplorersCompassScreen getParentScreen() {
+	public StructureFinderScreen getParentScreen() {
 		return parentScreen;
 	}
-
 }

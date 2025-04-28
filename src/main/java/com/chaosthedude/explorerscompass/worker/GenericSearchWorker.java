@@ -1,17 +1,17 @@
 package com.chaosthedude.explorerscompass.worker;
 
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-import com.chaosthedude.explorerscompass.ExplorersCompass;
-import com.chaosthedude.explorerscompass.items.ExplorersCompassItem;
 import com.mojang.datafixers.util.Pair;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement;
@@ -24,8 +24,9 @@ public class GenericSearchWorker extends StructureSearchWorker<StructurePlacemen
 	public double nextLength;
 	public Direction direction;
 
-	public GenericSearchWorker(ServerLevel level, Player player, ItemStack stack, BlockPos startPos, StructurePlacement placement, List<Structure> structureSet, String managerId) {
-		super(level, player, stack, startPos, placement, structureSet, managerId);
+	public GenericSearchWorker(ServerLevel level, Player player, BlockPos startPos, StructurePlacement placement, List<Structure> structureSet, String managerId,
+							   BiConsumer<ResourceLocation, Pair<Integer, Integer>> onSuccess, Consumer<ResourceLocation> onFailure) {
+		super(level, player, startPos, placement, structureSet, managerId, onSuccess, onFailure);
 		chunkX = startPos.getX() >> 4;
 		chunkZ = startPos.getZ() >> 4;
 		nextLength = 1;
@@ -45,7 +46,7 @@ public class GenericSearchWorker extends StructureSearchWorker<StructurePlacemen
 			} else if (direction == Direction.WEST) {
 				chunkX--;
 			}
-			
+
 			ChunkPos chunkPos = new ChunkPos(chunkX, chunkZ);
 			currentPos = new BlockPos(SectionPos.sectionToBlockCoord(chunkPos.x, 8), 0, SectionPos.sectionToBlockCoord(chunkPos.z, 8));
 
@@ -68,32 +69,28 @@ public class GenericSearchWorker extends StructureSearchWorker<StructurePlacemen
 
 			int radius = getRadius();
 			if (radius > 250 && radius / 250 > lastRadiusThreshold) {
-				if (!stack.isEmpty() && stack.getItem() == ExplorersCompass.explorersCompass) {
-					((ExplorersCompassItem) stack.getItem()).setSearchRadius(stack, roundRadius(radius, 250), player);
-				}
 				lastRadiusThreshold = radius / 250;
 			}
 		}
-		
+
 		if (hasWork()) {
 			return true;
 		}
-		
+
 		if (!finished) {
 			fail();
 		}
-		
+
 		return false;
 	}
-	
+
 	@Override
 	protected String getName() {
 		return "GenericSearchWorker";
 	}
-	
+
 	@Override
 	public boolean shouldLogRadius() {
 		return true;
 	}
-
 }

@@ -1,14 +1,16 @@
 package com.chaosthedude.explorerscompass.worker;
 
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.mojang.datafixers.util.Pair;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
@@ -22,8 +24,9 @@ public class RandomSpreadSearchWorker extends StructureSearchWorker<RandomSpread
 	private int x;
 	private int z;
 
-	public RandomSpreadSearchWorker(ServerLevel level, Player player, ItemStack stack, BlockPos startPos, RandomSpreadStructurePlacement placement, List<Structure> structureSet, String managerId) {
-		super(level, player, stack, startPos, placement, structureSet, managerId);
+	public RandomSpreadSearchWorker(ServerLevel level, Player player, BlockPos startPos, RandomSpreadStructurePlacement placement, List<Structure> structureSet, String managerId,
+									BiConsumer<ResourceLocation, Pair<Integer, Integer>> onSuccess, Consumer<ResourceLocation> onFailure) {
+		super(level, player, startPos, placement, structureSet, managerId, onSuccess, onFailure);
 
 		spacing = placement.spacing();
 		startSectionPosX = SectionPos.blockToSectionCoord(startPos.getX());
@@ -50,10 +53,10 @@ public class RandomSpreadSearchWorker extends StructureSearchWorker<RandomSpread
 			if (shouldSampleX || shouldSampleZ) {
 				int sampleX = startSectionPosX + (spacing * x);
 				int sampleZ = startSectionPosZ + (spacing * z);
-				
+
 				ChunkPos chunkPos = placement.getPotentialStructureChunk(level.getSeed(), sampleX, sampleZ);
 				currentPos = new BlockPos(SectionPos.sectionToBlockCoord(chunkPos.x, 8), 0, SectionPos.sectionToBlockCoord(chunkPos.z, 8));
-				
+
 				Pair<BlockPos, Structure> pair = getStructureGeneratingAt(chunkPos);
 				samples++;
 				if (pair != null) {
@@ -79,19 +82,19 @@ public class RandomSpreadSearchWorker extends StructureSearchWorker<RandomSpread
 		if (hasWork()) {
 			return true;
 		}
-		
+
 		if (!finished) {
 			fail();
 		}
-		
+
 		return false;
 	}
-	
+
 	@Override
 	protected String getName() {
 		return "RandomSpreadSearchWorker";
 	}
-	
+
 	@Override
 	public boolean shouldLogRadius() {
 		return true;
@@ -117,5 +120,4 @@ public class RandomSpreadSearchWorker extends StructureSearchWorker<RandomSpread
 
 		return null;
 	}
-
 }

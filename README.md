@@ -1,6 +1,15 @@
-# Explorer's Compass
+# Structure Finder
 
-Explorer's Compass is a Minecraft mod that allows you to search for and locate structures anywhere in the world. It is the sister mod of [Nature's Compass](https://github.com/MattCzyr/NaturesCompass), which allows you to locate biomes.
+Structure Finder is a Minecraft mod that allows you to search for and locate structures anywhere in the world. It is derived from [Explorer's Compass](https://github.com/MattCzyr/ExplorersCompass), but with a new UI-focused approach rather than requiring a craftable item.
+
+## Features
+
+- Press J (configurable) to open the Structure Finder UI at any time
+- Search for Minecraft structures across all dimensions
+- View coordinates of found structures in a searchable, sortable list
+- Teleport to found structures when in creative mode
+- Search for groups of related structures
+- Sort structures by name, type, dimension, or source mod
 
 ## Download
 
@@ -12,12 +21,12 @@ Downloads, installation instructions, and more information can be found on [Curs
 
 Fork this repository, then clone via SSH:
 ```
-git clone git@github.com:<you>/ExplorersCompass.git
+git clone git@github.com:<you>/StructureFinder.git
 ```
 
 Or, clone via HTTPS:
 ```
-git clone https://github.com/<you>/ExplorersCompass.git
+git clone https://github.com/<you>/StructureFinder.git
 ```
 
 2. In the root of the repository, run:

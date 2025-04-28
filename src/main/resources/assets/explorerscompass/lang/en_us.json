@@ -1,14 +1,16 @@
 {
-    "_comment": "Explorer's Compass - Language File",
+    "_comment": "Structure Finder - Language File",
     "_comment": "UNITED STATES - ENGLISH",
 
-    "_comment": "ITEMS",
-    "item.explorerscompass.explorerscompass": "Explorer's Compass",
+    "_comment": "KEYS",
+    "key.explorerscompass.structurefinder": "Open Structure Finder",
+    "key.categories.explorerscompass": "Structure Finder",
 
     "_comment": "STRINGS - BUTTONS",
     "string.explorerscompass.back": "Back",
     "string.explorerscompass.searchForGroup": "Search for Group",
     "string.explorerscompass.selectStructure": "Select Structure",
+    "string.explorerscompass.structureFinder": "Structure Finder",
     "string.explorerscompass.teleport": "Teleport",
 
     "_comment": "STRINGS - GUI",

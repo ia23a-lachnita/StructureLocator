@@ -5,33 +5,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.chaosthedude.explorerscompass.network.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.lwjgl.glfw.GLFW;
 
 import com.chaosthedude.explorerscompass.client.ClientEventHandler;
 import com.chaosthedude.explorerscompass.config.ConfigHandler;
-import com.chaosthedude.explorerscompass.items.ExplorersCompassItem;
-import com.chaosthedude.explorerscompass.network.CompassSearchPacket;
-import com.chaosthedude.explorerscompass.network.SyncPacket;
-import com.chaosthedude.explorerscompass.network.TeleportPacket;
-import com.chaosthedude.explorerscompass.util.CompassState;
+import com.chaosthedude.explorerscompass.gui.GuiWrapper;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.item.ClampedItemPropertyFunction;
-import net.minecraft.client.renderer.item.ItemProperties;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.decoration.ItemFrame;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.event.TickEvent.ClientTickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
@@ -50,22 +44,27 @@ public class ExplorersCompass {
 	public static final Logger LOGGER = LogManager.getLogger(MODID);
 
 	public static SimpleChannel network;
-	public static ExplorersCompassItem explorersCompass;
 
 	public static boolean canTeleport;
 	public static List<ResourceLocation> allowedStructureKeys;
 	public static ListMultimap<ResourceLocation, ResourceLocation> dimensionKeysForAllowedStructureKeys;
 	public static Map<ResourceLocation, ResourceLocation> structureKeysToTypeKeys;
 	public static ListMultimap<ResourceLocation, ResourceLocation> typeKeysToStructureKeys;
-	
+
+	@OnlyIn(Dist.CLIENT)
+	public static KeyMapping structureFinderKey;
+
 	public ExplorersCompass() {
 		FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
 		DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
 			FMLJavaModLoadingContext.get().getModEventBus().addListener(this::clientSetup);
+			FMLJavaModLoadingContext.get().getModEventBus().addListener(this::registerKeyBindings);
 		});
-		
+
 		ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ConfigHandler.GENERAL_SPEC);
 		ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, ConfigHandler.CLIENT_SPEC);
+
+		MinecraftForge.EVENT_BUS.register(this);
 	}
 
 	private void commonSetup(FMLCommonSetupEvent event) {
@@ -74,92 +73,38 @@ public class ExplorersCompass {
 		// Server packets
 		network.registerMessage(0, CompassSearchPacket.class, CompassSearchPacket::toBytes, CompassSearchPacket::new, CompassSearchPacket::handle);
 		network.registerMessage(1, TeleportPacket.class, TeleportPacket::toBytes, TeleportPacket::new, TeleportPacket::handle);
+		network.registerMessage(2, SyncRequestPacket.class, SyncRequestPacket::toBytes, SyncRequestPacket::new, SyncRequestPacket::handle);
 
-		// Client packet
-		network.registerMessage(2, SyncPacket.class, SyncPacket::toBytes, SyncPacket::new, SyncPacket::handle);
+		// Client packets
+		network.registerMessage(3, SyncPacket.class, SyncPacket::toBytes, SyncPacket::new, SyncPacket::handle);
+		network.registerMessage(4, StructureFoundPacket.class, StructureFoundPacket::toBytes, StructureFoundPacket::new, StructureFoundPacket::handle);
+		network.registerMessage(5, StructureNotFoundPacket.class, StructureNotFoundPacket::toBytes, StructureNotFoundPacket::new, StructureNotFoundPacket::handle);
+		network.registerMessage(6, StopSearchesPacket.class, StopSearchesPacket::toBytes, StopSearchesPacket::new, StopSearchesPacket::handle);
+
 
 		allowedStructureKeys = new ArrayList<ResourceLocation>();
 		dimensionKeysForAllowedStructureKeys = ArrayListMultimap.create();
 		structureKeysToTypeKeys = new HashMap<ResourceLocation, ResourceLocation>();
 		typeKeysToStructureKeys = ArrayListMultimap.create();
 	}
-	
+
+	@OnlyIn(Dist.CLIENT)
+	public void registerKeyBindings(RegisterKeyMappingsEvent event) {
+		structureFinderKey = new KeyMapping("key.explorerscompass.structurefinder", GLFW.GLFW_KEY_J, "key.categories.explorerscompass");
+		event.register(structureFinderKey);
+	}
+
 	@OnlyIn(Dist.CLIENT)
 	public void clientSetup(FMLClientSetupEvent event) {
 		MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
-		
-		event.enqueueWork(() -> {
-			ItemProperties.register(explorersCompass, new ResourceLocation("angle"), new ClampedItemPropertyFunction() {
-				@OnlyIn(Dist.CLIENT)
-				private double rotation;
-				@OnlyIn(Dist.CLIENT)
-				private double rota;
-				@OnlyIn(Dist.CLIENT)
-				private long lastUpdateTick;
-	
-				@OnlyIn(Dist.CLIENT)
-				@Override
-				public float unclampedCall(ItemStack stack, ClientLevel world, LivingEntity entityLiving, int seed) {
-					if (entityLiving == null && !stack.isFramed()) {
-						return 0.0F;
-					} else {
-						final boolean entityExists = entityLiving != null;
-						final Entity entity = (Entity) (entityExists ? entityLiving : stack.getFrame());
-						if (world == null && entity.level instanceof ClientLevel) {
-							world = (ClientLevel) entity.level;
-						}
-	
-						double rotation = entityExists ? (double) entity.getYRot() : getFrameRotation((ItemFrame) entity);
-						rotation = rotation % 360.0D;
-						double adjusted = Math.PI - ((rotation - 90.0D) * 0.01745329238474369D - getAngle(world, entity, stack));
-	
-						if (entityExists) {
-							adjusted = wobble(world, adjusted);
-						}
-	
-						final float f = (float) (adjusted / (Math.PI * 2D));
-						return Mth.positiveModulo(f, 1.0F);
-					}
-				}
-	
-				@OnlyIn(Dist.CLIENT)
-				private double wobble(ClientLevel world, double amount) {
-					if (world.getGameTime() != lastUpdateTick) {
-						lastUpdateTick = world.getGameTime();
-						double d0 = amount - rotation;
-						d0 = d0 % (Math.PI * 2D);
-						d0 = Mth.clamp(d0, -1.0D, 1.0D);
-						rota += d0 * 0.1D;
-						rota *= 0.8D;
-						rotation += rota;
-					}
-	
-					return rotation;
-				}
-	
-				@OnlyIn(Dist.CLIENT)
-				private double getFrameRotation(ItemFrame itemFrame) {
-					Direction direction = itemFrame.getDirection();
-					int i = direction.getAxis().isVertical() ? 90 * direction.getAxisDirection().getStep() : 0;
-					return (double)Mth.wrapDegrees(180 + direction.get2DDataValue() * 90 + itemFrame.getRotation() * 45 + i);
-				}
-	
-				@OnlyIn(Dist.CLIENT)
-				private double getAngle(ClientLevel world, Entity entity, ItemStack stack) {
-					if (stack.getItem() == explorersCompass) {
-						ExplorersCompassItem compassItem = (ExplorersCompassItem) stack.getItem();
-						BlockPos pos;
-						if (compassItem.getState(stack) == CompassState.FOUND) {
-							pos = new BlockPos(compassItem.getFoundStructureX(stack), 0, compassItem.getFoundStructureZ(stack));
-						} else {
-							pos = world.getSharedSpawnPos();
-						}
-						return Math.atan2((double) pos.getZ() - entity.position().z(), (double) pos.getX() - entity.position().x());
-					}
-					return 0.0D;
-				}
-			});
-		});
 	}
 
+	@OnlyIn(Dist.CLIENT)
+	@SubscribeEvent
+	public void onClientTick(ClientTickEvent event) {
+		Player player = Minecraft.getInstance().player;
+		if (player != null && structureFinderKey != null && structureFinderKey.consumeClick()) {
+			GuiWrapper.openStructureFinderUI(Minecraft.getInstance().level, player);
+		}
+	}
 }

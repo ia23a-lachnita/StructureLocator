@@ -4,57 +4,58 @@ import java.util.function.Supplier;
 
 import com.chaosthedude.explorerscompass.ExplorersCompass;
 import com.chaosthedude.explorerscompass.config.ConfigHandler;
-import com.chaosthedude.explorerscompass.items.ExplorersCompassItem;
-import com.chaosthedude.explorerscompass.util.CompassState;
-import com.chaosthedude.explorerscompass.util.ItemUtils;
+import com.chaosthedude.explorerscompass.gui.StructureFinderScreen.SearchResult;
 import com.chaosthedude.explorerscompass.util.PlayerUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.network.NetworkEvent;
 
 public class TeleportPacket {
 
+	private int x;
+	private int z;
+
 	public TeleportPacket() {}
 
-	public TeleportPacket(FriendlyByteBuf buf) {}
+	public TeleportPacket(SearchResult result) {
+		this.x = result.getX();
+		this.z = result.getZ();
+	}
 
-	public void fromBytes(FriendlyByteBuf buf) {}
+	public TeleportPacket(FriendlyByteBuf buf) {
+		x = buf.readInt();
+		z = buf.readInt();
+	}
 
-	public void toBytes(FriendlyByteBuf buf) {}
+	public void toBytes(FriendlyByteBuf buf) {
+		buf.writeInt(x);
+		buf.writeInt(z);
+	}
 
 	public void handle(Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
-			final ItemStack stack = ItemUtils.getHeldItem(ctx.get().getSender(), ExplorersCompass.explorersCompass);
-			if (!stack.isEmpty()) {
-				final ExplorersCompassItem explorersCompass = (ExplorersCompassItem) stack.getItem();
-				final ServerPlayer player = ctx.get().getSender();
-				if (ConfigHandler.GENERAL.allowTeleport.get() && PlayerUtils.canTeleport(player.getServer(), player)) {
-					if (explorersCompass.getState(stack) == CompassState.FOUND) {
-						final int x = explorersCompass.getFoundStructureX(stack);
-						final int z = explorersCompass.getFoundStructureZ(stack);
-						final int y = findValidTeleportHeight(player.level, x, z);
+			final ServerPlayer player = ctx.get().getSender();
+			if (ConfigHandler.GENERAL.allowTeleport.get() && PlayerUtils.canTeleport(player.getServer(), player)) {
+				final int y = findValidTeleportHeight(player.level, x, z);
 
-						player.stopRiding();
-						player.connection.teleport(x, y, z, player.getYRot(), player.getXRot());
+				player.stopRiding();
+				player.connection.teleport(x, y, z, player.getYRot(), player.getXRot());
 
-						if (!player.isFallFlying()) {
-							player.setDeltaMovement(player.getDeltaMovement().x(), 0, player.getDeltaMovement().z());
-							player.setOnGround(true);
-						}
-					}
-				} else {
-					ExplorersCompass.LOGGER.warn("Player " + player.getDisplayName().getString() + " tried to teleport but does not have permission.");
+				if (!player.isFallFlying()) {
+					player.setDeltaMovement(player.getDeltaMovement().x(), 0, player.getDeltaMovement().z());
+					player.setOnGround(true);
 				}
+			} else {
+				ExplorersCompass.LOGGER.warn("Player " + player.getDisplayName().getString() + " tried to teleport but does not have permission.");
 			}
 		});
 		ctx.get().setPacketHandled(true);
 	}
-	
+
 	private int findValidTeleportHeight(Level level, int x, int z) {
 		int upY = level.getSeaLevel();
 		int downY = level.getSeaLevel();
@@ -72,13 +73,12 @@ public class TeleportPacket {
 		}
 		return 256;
 	}
-	
+
 	private boolean isValidTeleportPosition(Level level, BlockPos pos) {
 		return !level.isOutsideBuildHeight(pos) && isFree(level, pos) && isFree(level, pos.above()) && !isFree(level, pos.below());
 	}
-	
+
 	private boolean isFree(Level level, BlockPos pos) {
 		return level.getBlockState(pos).isAir() || level.getBlockState(pos).is(BlockTags.FIRE) || level.getBlockState(pos).getMaterial().isLiquid() || level.getBlockState(pos).getMaterial().isReplaceable();
 	}
-
 }

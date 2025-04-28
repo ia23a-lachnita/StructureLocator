@@ -7,9 +7,12 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import com.chaosthedude.explorerscompass.ExplorersCompass;
+import com.chaosthedude.explorerscompass.gui.LoadingScreen;
+import com.chaosthedude.explorerscompass.gui.StructureFinderScreen;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkEvent;
@@ -93,11 +96,24 @@ public class SyncPacket {
 
 	public void handle(Supplier<NetworkEvent.Context> ctx) {
 		ctx.get().enqueueWork(() -> {
+			ExplorersCompass.LOGGER.info("Received structure sync packet with " + allowedStructureKeys.size() + " structures");
 			ExplorersCompass.canTeleport = canTeleport;
 			ExplorersCompass.allowedStructureKeys = allowedStructureKeys;
 			ExplorersCompass.dimensionKeysForAllowedStructureKeys = dimensionKeysForAllowedStructureKeys;
 			ExplorersCompass.structureKeysToTypeKeys = structureKeysToTypeKeys;
 			ExplorersCompass.typeKeysToStructureKeys = typeKeysToStructureKeys;
+
+			// If LoadingScreen is open, replace it with actual UI
+			if (Minecraft.getInstance().screen instanceof LoadingScreen) {
+				Minecraft.getInstance().setScreen(new StructureFinderScreen(
+						Minecraft.getInstance().level,
+						Minecraft.getInstance().player,
+						ExplorersCompass.allowedStructureKeys));
+			}
+			// If structure finder is already open, refresh it
+			else if (Minecraft.getInstance().screen instanceof StructureFinderScreen) {
+				((StructureFinderScreen)Minecraft.getInstance().screen).refreshStructureList();
+			}
 		});
 		ctx.get().setPacketHandled(true);
 	}
