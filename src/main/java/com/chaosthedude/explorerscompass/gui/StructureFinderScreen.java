@@ -48,6 +48,39 @@ public class StructureFinderScreen extends Screen {
         structureKeysMatchingSearch = new ArrayList<ResourceLocation>(this.allowedStructureKeys);
         searchResults = new HashMap<>();
         sortingCategory = new NameSorting();
+
+        // Load any previously found structures from persistent storage
+        loadSavedStructures();
+    }
+
+    // Add this new method to load saved structures
+    private void loadSavedStructures() {
+        // Initialize the data manager if needed
+        com.chaosthedude.explorerscompass.util.StructureDataManager.init();
+
+        // Load all found structures from persistent storage
+        ExplorersCompass.LOGGER.info("Loading saved structure data");
+        Map<String, com.mojang.datafixers.util.Pair<Integer, Integer>> savedStructures =
+                com.chaosthedude.explorerscompass.util.StructureDataManager.getAllFoundStructures();
+
+        // Add each saved structure to our search results
+        for (Map.Entry<String, com.mojang.datafixers.util.Pair<Integer, Integer>> entry : savedStructures.entrySet()) {
+            try {
+                ResourceLocation key = new ResourceLocation(entry.getKey());
+                int x = entry.getValue().getFirst();
+                int z = entry.getValue().getSecond();
+
+                // Only add if it's in our allowed structures list
+                if (allowedStructureKeys.contains(key)) {
+                    searchResults.put(key, new SearchResult(x, z));
+                    ExplorersCompass.LOGGER.info("Loaded saved structure: " + key + " at X: " + x + ", Z: " + z);
+                }
+            } catch (Exception e) {
+                ExplorersCompass.LOGGER.error("Error loading saved structure: " + entry.getKey(), e);
+            }
+        }
+
+        ExplorersCompass.LOGGER.info("Loaded " + searchResults.size() + " structures from persistent storage");
     }
 
     @Override
@@ -238,6 +271,16 @@ public class StructureFinderScreen extends Screen {
             sortByButton.setMessage(Component.translatable("string.explorerscompass.sortBy").append(Component.literal(": " + sortingCategory.getLocalizedName())));
             selectionList.refreshList();
         }));
+
+        // Add Clear Found Structures button above the Cancel button
+        Button clearFoundButton = addRenderableWidget(new TransparentButton(10, height - 55, 110, 20,
+                Component.translatable("string.explorerscompass.clearFound"), (onPress) -> {
+            com.chaosthedude.explorerscompass.util.StructureDataManager.clearFoundStructures();
+            searchResults.clear();
+            selectionList.refreshList();
+            teleportButton.active = false;
+        }));
+
         cancelButton = addRenderableWidget(new TransparentButton(10, height - 30, 110, 20, Component.translatable("gui.cancel"), (onPress) -> {
             minecraft.setScreen(null);
         }));

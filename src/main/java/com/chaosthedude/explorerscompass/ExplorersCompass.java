@@ -97,6 +97,11 @@ public class ExplorersCompass {
 	@OnlyIn(Dist.CLIENT)
 	public void clientSetup(FMLClientSetupEvent event) {
 		MinecraftForge.EVENT_BUS.register(new ClientEventHandler());
+
+		// Initialize structure data manager
+		event.enqueueWork(() -> {
+			com.chaosthedude.explorerscompass.util.StructureDataManager.init();
+		});
 	}
 
 	@OnlyIn(Dist.CLIENT)
